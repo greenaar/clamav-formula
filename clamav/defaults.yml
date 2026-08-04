@@ -1,0 +1,48 @@
+---
+clamav:
+  clamd:
+    pkgs: [clamav, clamav-daemon]
+    config_path: /etc/clamav
+    config_file: clamd.conf
+    config_file_owner: root
+    config_file_group: root
+    service_name: clamav-daemon
+    service_state: running
+    service_onboot: true
+    config:
+      LogTime: 'yes'
+      LogFile: /var/log/clamav/clamav.log
+      LogFileMaxSize: 0
+      LogRotate: 'yes'
+      PidFile: /run/clamav/clamd.pid
+      DatabaseDirectory: /var/lib/clamav
+      TemporaryDirectory: /tmp
+      LocalSocket: /run/clamav/clamd.ctl
+      LocalSocketGroup: clamav
+      LocalSocketMode: 660
+      FixStaleSocket: 'yes'
+      User: clamav
+      SelfCheck: 3600
+      ScanMail: 'yes'
+      ScanArchive: 'yes'
+      MaxScanSize: 100M
+      MaxFileSize: 25M
+  freshclam:
+    pkgs: [clamav-freshclam]
+    config_path: /etc/clamav
+    config_file: freshclam.conf
+    config_file_owner: root
+    config_file_group: root
+    service_name: clamav-freshclam
+    service_state: running
+    service_onboot: true
+    config:
+      DatabaseOwner: clamav
+      DatabaseDirectory: /var/lib/clamav
+      UpdateLogFile: /var/log/clamav/freshclam.log
+      LogFileMaxSize: 0
+      LogRotate: 'yes'
+      DatabaseMirror: [database.clamav.net]
+      MaxAttempts: 5
+      Checks: 12
+      NotifyClamd: /etc/clamav/clamd.conf

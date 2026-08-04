@@ -1,0 +1,9 @@
+name: clamav
+os: Arch, Arch ARM, CentOS, CentOS Linux, Debian, FreeBSD, Leap, Manjaro, Raspbian, RedHat, SUSE, Ubuntu, openSUSE
+os_family: Arch, Debian, FreeBSD, RedHat, Suse
+version: 1.0.0
+release: 1
+minimum_version: 3006
+summary: 'clamav formula'
+description: 'Installs and configures the distribution-supported ClamAV daemon and FreshClam updater on current Debian and Ubuntu releases.'
+top_level_dir: clamav

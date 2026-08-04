@@ -1,0 +1,4 @@
+/var/spool/MailScanner/** rw,
+/var/spool/MailScanner/incoming/** rw,
+
+capability dac_read_search,

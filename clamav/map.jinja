@@ -1,0 +1,147 @@
+# -*- coding: utf-8 -*-
+# vim: ft=jinja
+
+{# Legacy deep-merge implementation retained below for reference. #}
+{% if false %}
+{%- macro deep_merge(a, b) %}
+{%-     for k,v in b.items() %}
+{%-         if v is string or v is number %}
+{%-             do a.update({ k: v }) %}
+{%-         elif v is not mapping %}
+{%-             if a[k] is not defined %}
+{%-                 do a.update({ k: v }) %}
+{%-             elif a[k] is iterable and a[k] is not mapping and a[k] is not string %}
+{%-                 do a.update({ k: v|list + a[k]|list}) %}
+{%-             else %}
+{%-                 do a.update({ k: v }) %}
+{%-             endif %}
+{%-         elif v is mapping %}
+{%-             if a[k] is not defined %}
+{%-                 do a.update({ k: v }) %}
+{%-             elif a[k] is not mapping %}
+{%-                 do a.update({ k: v }) %}
+{%-             else %}
+{%-                 do deep_merge(a[k], v) %}
+{%-             endif %}
+{%-         else %}
+{%-            do a.update({ k: 'ERROR: case not contempled in merging!' }) %}
+{%-         endif %}
+{%-     endfor %}
+{%- endmacro %}
+
+{## Start with  defaults from defaults.sls ##}
+{% import_yaml 'clamav/defaults.yml' as default_settings %}
+
+{##
+Setup variable using grains['os_family'] based logic, only add key:values here
+that differ from the legacy defaults structure
+##}
+
+{% set os_family_map = salt['grains.filter_by']({
+        'Debian': {
+          'clamd': {
+            'pkgs': [ 'clamav', 'clamav-daemon'],
+          },
+          'freshclam': {
+            'pkgs': ['clamav-freshclam'],
+           },
+        },
+        'Suse': {
+          'clamd': {
+            'pkgs': [ 'clamav' ],
+            'service_name': 'clamd.service',
+            'config_path': '/etc',
+            'config_file': 'clamd.conf',
+          },
+          'freshclam': {
+            'pkgs': [ 'clamav' ],
+            'service_name': 'freshclam.service',
+            'config_path': '/etc',
+          },
+        },
+        'Arch': {
+          'clamd': {
+            'pkgs': [ 'clamav' ],
+          },
+          'freshclam': {
+            'pkgs': [ 'clamav' ],
+          },
+        },
+        'RedHat': {
+          'clamd': {
+            'pkgs': [ 'clamav', 'clamav-scanner-systemd' ],
+            'user': 'clamscan',
+            'group': 'clamscan',
+            'config_path': '/etc/clamd.d',
+            'config_file': 'scan.conf',
+            'service_name': 'clamd@scan',
+            'config': {
+              'LogSyslog': 'yes',
+              'PidFile': '/run/clamd.scan/clamd.pid',
+              'LocalSocket': '/run/clamd.scan/clamd.sock',
+              'LocalSocketGroup': 'clamscan',
+              'User': 'clamscan',
+             },
+          },
+          'freshclam': {
+            'pkgs': [ 'clamav-update' ],
+            'config_path': '/etc',
+            'service_name': 'freshclam.service',
+            'config': {
+              'UpdateLogFile': '/var/log/freshclam.log',
+              'NotifyClamd': '/etc/clamd.d/scan.conf',
+            },
+          },
+        },
+      'FreeBSD': {
+          'clamd': {
+            'pkgs': [ 'clamav' ],
+            'service_name': 'clamav-clamd',
+            'config_path': '/usr/local/etc',
+            'config_file': 'clamd.conf',
+            'config_file_group': 'wheel',
+            'config': {
+              'LogFile': '/var/log/clamav/clamd.log',
+              'PidFile': '/var/run/clamav/clamd.pid',
+              'DatabaseDirectory': '/var/db/clamav',
+              'DatabaseDirectory': '/var/tmp',
+              'FixStaleSocket': 'yes',
+              'LocalSocket': '/var/run/clamav/clamd.sock',
+              'User': 'clamav',
+              'ScanMail': 'yes',
+            },
+          },
+          'freshclam': {
+            'pkgs': [ 'clamav' ],
+            'service_name': 'clamav-freshclam',
+            'config_path': '/usr/local/etc',
+            'config_file': 'freshclam.conf',
+            'config_file_group': 'wheel',
+            'config': {
+              'NotifyClamd': '/usr/local/etc/clamd.conf',
+              'UpdateLogFile': '/var/log/clamav/freshclam.log',
+              'PidFile': '/var/run/clamav/freshclam.pid',
+              'DatabaseDirectory': '/var/db/clamav',
+              'DatabaseOwner': 'clamav',
+              'DatabaseMirror': 'database.clamav.net',
+            },
+          },
+        },
+
+  }
+  , grain="os_family"
+  , merge=salt['pillar.get']('clamav:lookup'))
+%}
+{## Merge the flavor_map to the default settings ##}
+{% do deep_merge(default_settings.clamav,os_family_map) %}
+
+{## Merge in clamav:lookup pillar ##}
+{% set clamav = salt['pillar.get'](
+        'clamav',
+        default=default_settings.clamav,
+        merge=True
+    )
+%}
+{% endif %}
+{%- import_yaml 'clamav/defaults.yml' as defaults %}
+{%- set clamav = salt['pillar.get']('clamav', default=defaults.clamav, merge=True) %}
